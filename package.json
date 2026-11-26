@@ -1,0 +1,17 @@
+{
+  "name": "aum-collector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Usage Monitor for Mac: menu bar app and local collector that read AI tool usage on your Mac and sync normalised figures to your account.",
+  "type": "module",
+  "bin": {
+    "aum-collector": "./bin/aum-collector.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0"
+  },
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,41 @@
+name: Build release
+# Pushing a version tag (for example v0.14.1) runs the tests, builds the
+# ad-hoc signed Apple Silicon app, and creates a DRAFT release. A maintainer
+# must test the draft ZIP on a real Mac before publishing it.
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  build:
+    # 0.14.0 is the hand-uploaded, Mac-tested ZIP. Never rebuild it.
+    if: github.ref_name != 'v0.14.0'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun test
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - name: Install rcodesign
+        run: |
+          V=0.29.0
+          curl -sSfL -o rc.tgz "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F$V/apple-codesign-$V-x86_64-unknown-linux-musl.tar.gz"
+          tar xzf rc.tgz
+          sudo install apple-codesign-*/rcodesign /usr/local/bin/rcodesign
+      - name: Build
+        run: bash scripts/build-mac-app.sh "$RUNNER_TEMP/out"
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "A release for $GITHUB_REF_NAME already exists; leaving it untouched."; exit 0
+          fi
+          gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME (untested build)" \
+            --notes "Automated build. Not yet tested on a real Mac. Do not publish until tested." \
+            "$RUNNER_TEMP"/out/*.zip "$RUNNER_TEMP/out/SHA256SUMS.txt"
